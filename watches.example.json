@@ -1,0 +1,11 @@
+[
+  {
+    "label": "example-endorser",
+    "match_issuer": "did:key:z6MkiGt1Jkzyn6L8m4JmyMwus3Ma6ZymomUJb6bxNUKhrZAt"
+  },
+  {
+    "label": "example-substring",
+    "match_substring": "ep:receipt:",
+    "email": "someone@example.com"
+  }
+]
