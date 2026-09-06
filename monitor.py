@@ -52,16 +52,23 @@ import urllib.request
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.environ.get("MONITOR_CONFIG", os.path.join(BASE, "config.json"))
 CONFIG = json.load(open(CONFIG_PATH))
+_PQ_COSIG_LEN = 2432  # keyid(4) + be64 timestamp(8) + ML-DSA-44 signature(2420)
 STATE_PATH = os.path.join(BASE, "state.json")
 WATCHES_PATH = os.path.join(BASE, "watches.json")
 
 LOG_URL = CONFIG["log_url"].rstrip("/")
 VKEY = CONFIG["log_vkey"]  # name+hash8+base64(algbyte+key)
 WITNESS_VKEYS = CONFIG.get("witness_vkeys", [])  # name+hash8+base64(0x04+key)
+# Witnesses that cosign but are NOT in the signed trust-root manifest. Their
+# signatures are verified (a bad one is a forgery signal like any other) but
+# they carry NO quorum weight, because /policy says the quorum is counted only
+# over the pinned set. Promoting one means a v3 manifest, not a config edit.
+ADVISORY_VKEYS = CONFIG.get("witness_vkeys_advisory", [])
 QUORUM_MIN = int(CONFIG.get("quorum_min", 4))
+PQ_VKEYS = CONFIG.get("pq_vkeys", [])  # name+hash8+base64(0x06+1312-byte ML-DSA-44 key)
 FROM_EMAIL = CONFIG["from_email"]
 ALERT_EMAIL = CONFIG["alert_email"]
-RESEND_ENV = CONFIG.get("resend_env", "resend.env")
+RESEND_ENV = CONFIG.get("resend_env", "/home/mkv/.secrets/resend.env")
 
 
 def http_get(path):
@@ -122,18 +129,90 @@ def parse_witness_vkey(vkey):
     return name, kid, pub
 
 
+def verify_pq_cosignatures(body, sigs):
+    """Verify the ML-DSA-44 cosignature lines, which this monitor used to count and
+    skip. A signature nobody checks is not evidence, and we were publishing three of
+    them on every checkpoint: if one had been 2420 bytes of noise, no code of ours
+    would ever have said so. FIPS 204, pure, empty context. The signed message is the
+    tlog subtree/v1 preimage, not the cosignature/v1 note used for Ed25519.
+
+    Returns (verified, invalid, unkeyed, unavailable). unavailable is a string reason
+    when no ML-DSA-44 implementation is importable: that is reported as an inability
+    to check, never as a pass.
+    """
+    if not PQ_VKEYS:
+        return set(), set(), set(), "no pq_vkeys pinned in config", 0
+    try:
+        from dilithium_py.ml_dsa import ML_DSA_44
+    except Exception as e:
+        return set(), set(), set(), "no ML-DSA-44 implementation: %r" % (e,), 0
+
+    try:
+        lines = body.split("\n")
+        origin, size, root32 = lines[0], int(lines[1]), base64.b64decode(lines[2])
+    except Exception as e:
+        return set(), set(), set(), "unparseable checkpoint body: %r" % (e,), 0
+
+    pinned = {}
+    for vkey in PQ_VKEYS:
+        name, kid, b64 = vkey.split("+", 2)
+        kb = base64.b64decode(b64 + "=" * (-len(b64) % 4))
+        alg, pub = kb[0], kb[1:]
+        if hashlib.sha256(name.encode() + b"\n" + bytes([alg]) + pub).digest()[:4].hex() != kid:
+            # A pinned key whose id does not derive from its own bytes is a broken
+            # pin, not a broken signature. Refuse to use it rather than fail lines.
+            continue
+        pinned[(name, kid)] = pub
+
+    def lp(b):
+        return bytes([len(b)]) + b
+
+    log_name = parse_vkey(VKEY)[0]
+    verified, invalid, unkeyed = set(), set(), set()
+    present = 0                      # independent ML-DSA-44 lines, log's own excluded
+    for name, raw in sigs:
+        if len(raw) != _PQ_COSIG_LEN:
+            continue
+        if name != log_name:
+            present += 1
+        kid = raw[:4].hex()
+        pub = pinned.get((name, kid))
+        if pub is None:
+            unkeyed.add("%s/%s" % (name, kid))
+            continue
+        ts = int.from_bytes(raw[4:12], "big")
+        msg = (b"subtree/v1\n\x00" + lp(name.encode()) + ts.to_bytes(8, "big")
+               + lp(origin.encode()) + (0).to_bytes(8, "big")
+               + size.to_bytes(8, "big") + root32)
+        try:
+            if ML_DSA_44.verify(pub, msg, raw[12:]):
+                verified.add(name)
+            else:
+                invalid.add((name, "ML-DSA-44 signature did not verify"))
+        except Exception as e:
+            invalid.add((name, "ML-DSA-44 verify error: %r" % (e,)))
+    # The log's own ML-DSA line is verified above and then dropped from the count,
+    # for the same reason its Ed25519 line is: the operator holding its own key is
+    # not evidence about the operator. Counting it would inflate the ratio to 3/2.
+    return verified - {log_name}, invalid, unkeyed, None, present
+
+
 def verify_cosignatures(body, sigs):
     """Verify every cosignature line against the pinned witness keys.
 
-    Returns (verified, invalid, unknown, skipped, newest_ts):
-      verified — set of pinned witness names with a valid cosignature
-      invalid  — set of (name, reason) for pinned witnesses whose
+    Returns (verified, invalid, unknown, skipped, newest_ts, advisory_ok):
+      verified — set of PINNED witness names with a valid cosignature. This is
+                 the only set the quorum is counted over, matching /policy.
+      invalid  — set of (name, reason) for pinned OR advisory witnesses whose
                  cosignature FAILS verification (forgery signal)
-      unknown  — set of cosigner names with no pinned key (not trusted)
-      skipped  — count of non-Ed25519-cosignature blobs from pinned names
+      unknown  — set of cosigner names with no key at all (not trusted)
+      skipped  — count of non-Ed25519-cosignature blobs from known names
                  (e.g. post-quantum schemes; wrong length for cosig/v1)
-      newest_ts — max cosignature unix timestamp among VERIFIED witnesses,
-                 or 0 if none (used for the freshness/withholding check)
+      newest_ts — max cosignature unix timestamp among VERIFIED PINNED
+                 witnesses, or 0 if none (freshness/withholding check; an
+                 advisory witness must not be able to mask a frozen log)
+      advisory_ok — set of advisory (unpinned) witness names that cosigned
+                 validly. Reported, never counted.
     """
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from cryptography.exceptions import InvalidSignature
@@ -142,19 +221,26 @@ def verify_cosignatures(body, sigs):
     for vkey in WITNESS_VKEYS:
         name, kid, pub = parse_witness_vkey(vkey)
         pinned[name] = (kid, pub)
-    verified, invalid, unknown = set(), set(), set()
+    advisory = {}
+    for vkey in ADVISORY_VKEYS:
+        name, kid, pub = parse_witness_vkey(vkey)
+        if name in pinned:
+            continue   # pinned wins; never let a config edit double-count a name
+        advisory[name] = (kid, pub)
+    verified, invalid, unknown, advisory_ok = set(), set(), set(), set()
     skipped = 0
     newest_ts = 0
     for name, raw in sigs:
         if name == log_name:
             continue
-        if name not in pinned:
+        is_advisory = name in advisory
+        if name not in pinned and not is_advisory:
             unknown.add(name)
             continue
         if len(raw) != 76:  # keyid(4) + be64 timestamp(8) + ed25519 sig(64)
-            skipped += 1
+            skipped += 1   # counted here, verified by verify_pq_cosignatures
             continue
-        kid, pub = pinned[name]
+        kid, pub = advisory[name] if is_advisory else pinned[name]
         if raw[:4] != kid:
             invalid.add((name, "keyhash mismatch"))
             continue
@@ -162,11 +248,14 @@ def verify_cosignatures(body, sigs):
         msg = b"cosignature/v1\ntime " + str(ts).encode() + b"\n" + body.encode()
         try:
             Ed25519PublicKey.from_public_bytes(pub).verify(raw[12:], msg)
-            verified.add(name)
-            newest_ts = max(newest_ts, ts)
+            if is_advisory:
+                advisory_ok.add(name)   # verified, but carries no quorum weight
+            else:
+                verified.add(name)
+                newest_ts = max(newest_ts, ts)
         except InvalidSignature:
             invalid.add((name, "signature did not verify"))
-    return verified, invalid, unknown, skipped, newest_ts
+    return verified, invalid, unknown, skipped, newest_ts, advisory_ok
 
 
 # ── RFC 6962 consistency ──────────────────────────────────────────────
@@ -386,7 +475,7 @@ def main():
     sig_ok = verify_log_sig(body, sigs)
     if not sig_ok:
         problems.append("log signature INVALID on witnessed checkpoint")
-    verified, invalid, unknown, skipped, newest_ts = verify_cosignatures(body, sigs)
+    verified, invalid, unknown, skipped, newest_ts, advisory_ok = verify_cosignatures(body, sigs)
     for name, reason in sorted(invalid):
         problems.append(f"witness cosignature INVALID: {name} ({reason})")
     if len(verified) < QUORUM_MIN:
@@ -399,9 +488,26 @@ def main():
     if newest_ts and stale_by > freshness_max:
         problems.append(f"checkpoint STALE: newest witness cosignature is {stale_by}s old "
                         f"(> {freshness_max}s) — log frozen or a cached view is being served")
+    # ML-DSA-44 lines: verified now, not skipped. An invalid one is a forgery
+    # signal exactly like a bad Ed25519 line; an unpinned one is untrusted, not
+    # broken; and no implementation available is reported as "could not check".
+    pq_verified, pq_invalid, pq_unkeyed, pq_unavailable, pq_present = verify_pq_cosignatures(body, sigs)
+    for name, reason in sorted(pq_invalid):
+        problems.append(f"ML-DSA-44 cosignature INVALID: {name} ({reason})")
+    if pq_unavailable and skipped:
+        problems.append(f"{skipped} ML-DSA-44 cosignature(s) could not be checked: {pq_unavailable}")
+    elif not pq_unavailable and len(pq_verified) < pq_present:
+        problems.append(f"ML-DSA-44: {len(pq_verified)} of {pq_present} independent lines verified")
+    pq_summary = (f"pq_verified={len(pq_verified)}/{pq_present}"
+                  + (f" pq_invalid={len(pq_invalid)}" if pq_invalid else "")
+                  + (f" pq_unkeyed={sorted(pq_unkeyed)}" if pq_unkeyed else "")
+                  + (f" pq_unchecked=({pq_unavailable})" if pq_unavailable else ""))
     cosig_summary = (f"verified={len(verified)}/{len(WITNESS_VKEYS)} invalid={len(invalid)} "
-                     f"unknown={sorted(unknown) if unknown else 0} pq_skipped={skipped} "
-                     f"cosig_age={stale_by}s")
+                     f"unknown={sorted(unknown) if unknown else 0} "
+                     + (f"advisory_ok={sorted(advisory_ok)} " if advisory_ok else "")
+                     + (f"advisory_silent={sorted(set(parse_witness_vkey(v)[0] for v in ADVISORY_VKEYS) - advisory_ok)} "
+                        if ADVISORY_VKEYS and set(parse_witness_vkey(v)[0] for v in ADVISORY_VKEYS) - advisory_ok else "")
+                     + f"{pq_summary} cosig_age={stale_by}s")
     authenticated = sig_ok and len(verified) >= QUORUM_MIN
 
     old_size = state.get("size", 0)

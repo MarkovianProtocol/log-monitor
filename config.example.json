@@ -1,19 +1,29 @@
 {
-  "log_url": "https://log.markovianprotocol.com",
-  "log_vkey": "markovianprotocol.com/log+0302c6c8+ATkpOWo95UuEiW2EhNZAol4f0CS8hMluJfPcTSzrr03v",
-  "witness_vkeys": [
-    "witness.stagemole.eu+67f7aea0+BEqSG3yu9YrmcM3BHvQYTxwFj3uSWakQepafafpUqklv",
-    "transparency.dev/DEV:witness-little-garden+d8042a87+BCtusOxINQNUTN5Oj8HObRkh2yHf/MwYaGX4CPdiVEPM",
-    "staging.witness.transparency.goog/ring-any-bells+2e1a8dc9+BG5JTpLc3FJtwzgh1Uv+Qelz9qeOH2bfWjS1s0s+y4rL",
-    "rgdd.se/poc-witness+db03732e+BCjJKlo6BU0xfIb8LutqerIFTWIXEA0L5n3tW3QyPFgG",
-    "witness1.smartit.nu/witness1+a48c820f+BPSFWg9G6KPiO7QPryYO5Xq4oYJJ+kAvLKLSimDhoxMO",
-    "remora.n621.de+da77ade7+BOvN63jn/bLvkieywe8R6UYAtVtNbZpXh34x7onlmtw2",
-    "witness.navigli.sunlight.geomys.org+a3e00fe2+BNy/co4C1Hn1p+INwJrfUlgz7W55dSZReusH/GhUhJ/G"
-  ],
-  "witness_vkeys_source": "https://markovianprotocol.com/.well-known/verify_checkpoint.py (site-published pins, each cited to the witness operator's own page)",
-  "quorum_min": 4,
-  "freshness_max_seconds": 10800,
-  "from_email": "Log Monitor <you@example.com>",
-  "alert_email": "you@example.com",
-  "resend_env": "/path/to/resend.env"
+ "log_url": "https://log.markovianprotocol.com",
+ "log_vkey": "markovianprotocol.com/log+0302c6c8+ATkpOWo95UuEiW2EhNZAol4f0CS8hMluJfPcTSzrr03v",
+ "witness_vkeys": [
+  "witness.stagemole.eu+67f7aea0+BEqSG3yu9YrmcM3BHvQYTxwFj3uSWakQepafafpUqklv",
+  "transparency.dev/DEV:witness-little-garden+d8042a87+BCtusOxINQNUTN5Oj8HObRkh2yHf/MwYaGX4CPdiVEPM",
+  "staging.witness.transparency.goog/ring-any-bells+2e1a8dc9+BG5JTpLc3FJtwzgh1Uv+Qelz9qeOH2bfWjS1s0s+y4rL",
+  "rgdd.se/poc-witness+db03732e+BCjJKlo6BU0xfIb8LutqerIFTWIXEA0L5n3tW3QyPFgG",
+  "witness1.smartit.nu/witness1+a48c820f+BPSFWg9G6KPiO7QPryYO5Xq4oYJJ+kAvLKLSimDhoxMO",
+  "remora.n621.de+da77ade7+BOvN63jn/bLvkieywe8R6UYAtVtNbZpXh34x7onlmtw2",
+  "witness.navigli.sunlight.geomys.org+a3e00fe2+BNy/co4C1Hn1p+INwJrfUlgz7W55dSZReusH/GhUhJ/G"
+ ],
+ "witness_vkeys_source": "https://markovianprotocol.com/.well-known/verify_checkpoint.py and https://log.markovianprotocol.com/policy and the v2 trust-root manifest, which agree at exactly these 7 keys. Each was collected from the witness operator's own published key page.",
+ "quorum_min": 4,
+ "freshness_max_seconds": 10800,
+ "from_email": "Log Monitor <monitor@example.com>",
+ "alert_email": "you@example.com",
+ "resend_env": "/path/to/resend.env",
+ "witness_vkeys_advisory": [
+  "gblin.digital/witness+c335a002+BF54nC8Q1wHAlKirQexRC5phxjLtbEhcq8udv8TXPwXx"
+ ],
+ "witness_vkeys_advisory_source": "gblin.digital/witness has cosigned since 2026-08-18 (key published at https://gblin-mcp.gblin-mcp-worker.workers.dev/witness) but is NOT in the v2 trust-root manifest, so /policy gives it no quorum weight. Verified here so a bad signature still alerts; never counted. Promotion requires a v3 manifest under the offline key.",
+ "pq_vkeys": [
+  "markovianprotocol.com/log+bda842cb+Bsni4fyz8zp1bzRSi4Q3Urs8SvqNnvLUsvvW0LQpZehhdR5EhI8ecuw4UZSeWzNN9+aInnJM+ifF6f2b0re3q28aAQY+SXiu6wJhREAl7q2mWD1R939JxBSlFfL25keKtKQiYxbmCYDysFe+6gW7HwT1X4vOS2JRXTvUOYJJ6t2aCRD+hzj7fudK4E+FJOGIVnyP50Hcgi2q8bWVd3WTdjmIKSzl4IpE5L9X52tGEKocPTqkOucbhzISOL7mURHCiDyi81l5QL0DJ/7ddP3hiprLhQkaGNA2Iq11O1XqJkmcKGkNn8iy8FqGQ1n7CHKmZccvmKd3r9qQsoK2uaX7EWkV3PeQIkVzVEGB8kfxE35h+jyct9QVHKtpPcXZCDLu4XMbcrNgIzgCb3GFzTu0j57K29Ny4PoFw33BHs/weGr/kaZoiQPY7n1NlEg4oCohJ6MYkoxDRQDH7GaLzQHFA8hCkIQOfjc42D5+mJfchtPq8w6xlu5PESSdTOsz27oS3Lkfi1FIrlpRalH1Id5h883iJO1dpmDnDTjXTtZ2Dyg2kOsch2Hr9/V4GKK18YtI3gOGkVujEdiRar0zovIDV0JMILQniY3XUD5uhagi8kVyuZBKOEEdaNjdWPX7PW9iTfEvIySAkR2LdI7qE65Pdx8Q/PJ/+7lByaM1fdfGlThNpOteVcVXYyNDed2lvrEeSogDe/ZiZqBiOryKR/u6TP1k7VdutLu1bHDLLl9IoGbbOTeAh4nzdbp7h0jEdlgrp1dhB8o54hkF+IyFZ5NPwU0MdsOUIYsqOzGnmDECUo8IEan3cvJxKLP1yuu8FGuSQ296yx4nxJMMI8sGaar9L4e3QpheDhMXMv5Vy4+XJmXhRcr1Whzx/3ifbx26I07/4nRHo2n008P7TWOw+gs85CwBd0/UJawO7HzAbKcF2HYtcREesHPuO/yh7dEiT5aCel3sHNeVyXDMSTFLp5ALAMjn51A+IgaTkZCt2itRg9/1+hFUSIQ0d6C8QN3TZSa/bV3IP3ZUVF3B80Nrcr4zJy2qxekD1HfQBmHNzeRDu7bG2hvko0G4gg8eEpVm4vGSoEZ/ABQ2eruId3QXzaugCbbAkBi5VQtiI3ndTBKcwgbxfLaZa+iFK7Kzr//DmF6/bR1cCjM12NMuaHPojp/l1SEKDpJ74cbnSZXfjvskjFW3BWjlyexLlGyuTUzHfpOa9/Yk9h3lkQENAK3L0Kg5V6JJq+REu6nYsFm8c7mbTlnDeEzqO1v2cj+5zKH9hrXKJl+dwoP73dhikhpKzrye4uMylzTDKqp6VqQqCGatfJC95lF69nuUWyJWQ01o9LtnRc0zukjJiDPhjlf1QqVcIfqv7814Ff/paS99Z8cN2Qz1CxWPnKNeJcCaFXKK61pFYqBnFchadRDHoNEIEUG8IopIffJ/vBrsfXDPo0tbcvdQD5qWHbL3KcZZaDXGSkzI88bjEhbxPjgwG43PshjBUdqHG3kBXX6ZU8vtL+uxN1DBbg32Nnmk4nOF9T6lugHPbb03FUbkoWwin+DtKe5q633SUMljFfJOCjV20UhLl383yI/zOy6D0kB7fgdGrthjN3o7RBXYRJnRrHvnKGqEaVATF9FEnnVGEXWUPam2kCHwtCq1ga+H9a8KGLhYIeqp9P5jV2DHQCaj1kk3WurgHO66L1z835p2nHAS6Ea+uVsilXYSPlf62m/9ODNUoqs0Ldzp3O1ETpsIxOiQOO72Nbs=",
+  "witness.navigli.sunlight.geomys.org+6bc44249+BvKbJzZZb2L5kdgqACS68/hxJoQQ88Zhp7esVL81HYRPQAurY9cfky201kuNm1oSO71BiNPWC8oNHunBo/PnRD/eWIuu/ZPIsiG0Cq9xg8dJsoKuQGXJ2Hu1QLBoyFWUFWAtmURCRi5bXFYJjVy4fFFh5ClS477HTy7av3C6VvnOdYTH1jISdXyIblBTWkQEq24gMc2JZKiS5YleWbXjlVuDKaU3yQjDhyWTd8AZuCvrcC9rE8wOZ7etpkAEf2pPINQ4LnMEHCWTuEE5NZwGWwqcekXvNQvv1jjfWQkhSzXbFvbLmifpWxRFrHn9OSEPGfaCksRUvKoTZzOrIPuFAhAraDIXX0DLwc7xY9hcg2lGpCaDoOXoyAS6m4wGiqerd0kLjFitkgJ7A/tpIcO+m255eyWnZwrevWaFgx+xwN7OjdJTlGMK9Qgd7QJW1Qilmt/h1SqZGpithCfje+/MiUea2eyTKbPBCf5c206/5Axu789uL1v22XZRO5tfDPLpU5lTPYdD0dt9M4I02G/2mHsZ43dbcsSYe0i+oM6GgIV0CoTx833GJMCjOOZbo3Qmlxwf3QFhkwGtc/db16iDfCW0U2NINxuSyDGahEIudOyNldfh+oe3tLyICiNGF3kGRQ1MRLD+e6AakJsjat9wMgjORHWx1rE7r14wCZtxFkSjOjSMpN8DiBXtGySSnWv2jKWnYnLPYhdqTJMEAZLLtd5Elaq+DukrJfmR5Jx348lx0E8AjALfg1oYQSCBKYlUN7h4kJhZhYGu6ahVPp1OBlA+DuBfoMtE6IiTfm11LseSOyNOtNTFe5V508Dw/APhoKuxy0mTAmEDmPnXTBvHhX1PVhl1qHTmfNhpukzxBRPKzsVN7y/FuJuqrX208k7SihRJGtDsXkQK/cFzTmSGvyHEKK+IHoKFpRK0dxEV6muqPJEEzehwZrJ7Rz0ZfkjuKVCiP98md+yD+r7GD2BjIb3IEzhrsbf5Ak7f5NImP4UoL6vy48ZfwmEo6tvn6StSVd912GYobRKHzboTBhUIn8c93VIX7PAQ64exm4l9wUBr3KMzHuykTW9m7C1xw1+Oqf3PGWN9rLHXNMPaR08xnImkTd+W74ls1sHH1CzJiNJB5QZg44zCajgL131L9G62AuTth/zJeGovddDU1m7N3i+e2Qz/omDKILlfUtcwPyyWeSvW/XX0ECFp/o9cDh/l6S5mcaT2Mtiiyn+owXl4Mx85Yppi2ZvVpZudLyhM0AGeoDdRRlfdeaJsvfC7pzBKzbj/1CKs7Ts962kvpCoDyZ5rMBK5PhFLvNXhl9ntKSTIAqUoM3vPgouzrA57Y9G5cWEJ741G4siABCFedWcDKT5zXKO682fncspp2MLjGCqNEWbSRRJ957q/W5mUyI1sDiXsKaaxGq0Xg86qu1AaEd7EBgOLj3i762ANsbZqtButkOdGD+MVeELpgNiOttWPW6Xq0ERM5NcJgezQJghy+y7IKf6zqrud4Ql6pklvjTuzCeLVsfpWQsqfgF4W0ZADldLfPCJIDBby1sxjh32i6hIp2R7QC6Mp87k9PAa5fiFDOqJXqDtGLxKPKu6UPdvbJHfHx4M37F6mfQnst4Bkjgf0kLGkW9isZ7bnids+QclIgfKFjZ5mD+ekGKo835+G44y7zAauKZzj8nBiNMSYwdAEMn6TYHciHn1VyetNEtzSMHInsV30TOnahKfkNgvAuNCuxrIyNvFHCw9t3vRr/J0=",
+  "staging.witness.transparency.goog/ring-any-bells+5774b075+Bi1GzCU2/5mxwhCBcfEpKliaoIg171qCFP3r3svllk/XlYj7hzNl9yVqfL2EBUdbC1vbnyCF6gD5XOFjsK4n64/mKMFIsWnuwoCVpqfUvHiM3sf48LMvFvWkQhHGEizw7FLiX+nmyM/EhzoNJ+98AKfLOjTvOFCqnb0RC9lLI+MlWGalc4fgNXYwcSBmShYfMBcaZzUt77SOHXORybbdeaGtRBU93KvBl03A9zipY5Hmn1E18ZtWtflwSV/tqgWs1Od1Hs+jHMGigKHKDaE4zYdRwkHFdf8VsTx4LJv2Ok0/4dfLxAZDEXAhpAbCbluBW5cf2Q6owZRa9obSEbjYXKCzSYySNh01rRf6K9o0VeFEK/6+CM45GvD/pMu++J1xGInxAjCoNqK3j3Rmx93WpIRmiwUhL+if1rPzrZO2m3Skek8QQx0Ke+HiaGcRYPUHqQ3Y/zJrJyXapg9lx9CgVXfOUWO89bocspztYABz43m5jqGaltjgOGUtYeoNvbtzzkJOugLLH43PwNPll064+oG4kmCAdVVS2VZHTm20l5qZ7jBumsrauD/S6dBpmZzua0hJlxf94I9gd8zmLsKLvjc9IAKkY26rMuAzl6Hu9NfXMM+8ZAtuJ6q2EKxy47dDn01AjrjZ/qYXiJbXDFTcHlUWF3fCujYgo8nCcoDYFbjby99TL++sHmivsz5kO2cR6xeJphlGt4Di5qxUaf9K70keUqr22R1rcLyGU5dPzWE0cAp+Z6dmvq4rM6QsTLfOjvZlydj/zfRs6BOBzlPEoqEWCN+A2MPCTm6NBV7L/24z0fUoGBh/08BGY37FU3nWwuldLKC+9nr1ItMhOKWKx8pkHnSllJEY0XVxpzE3eV08sCQyuRdVi++2K8Xnb3nUA7uQBr90IBCWzPzY/NWaBhVwqr+S1XzxHcHogWbVfdDxYgmj1tGWQaampa1ZwIBfjlHfn3ji2wSG8Mzd3jGTIX/4TlhN/rAlscnqnABEo24mzrQpOz7Dhc8hKhvAOXvS9b6GN6dml+O68UQg/qXNqBQep8UxOtmxmTMs5t/wBDNzkYwWONKwf682AaZfKaAOurHpkuGHlgCAtylWY/o4PDCyZ3e7wQfNRZK6asOUaq1CthaxRrLcemyvZYcydvw2ZFH/SF8J1RoeXtFRy4adRjPqNrzNk0um/cvxX8QB1Qf00sHXLOY7IfYdl6xUnsMsGrE5XkXWKxl8eN+VJhMpONQgB9MqgxLcQquesFpfeeo8k3MsX4+weJ8il/UNq7r6JWc+5/0E9bFDUTp30tSiwCEPEXBlQR8LbbBSTU7/cRru62D8L0/QvVnT4stFDouJpNPP5V7BbqPC36hQi7yVPXRyCUzsroDquICtaKqqnk90Ej0smXodBBXm4BHodXT1eXND5jR8N1AqzZcpucSmA6G5b33oXL3dlX+GP3q4JslJHRlQWFvp8Qbv6GYbnYGnvv4tIGxslibfdx1mKzuXczNeYlrlWJrddIXrFKgiwFBFTXG0HlIgeAMlF99g9Efyd4g/aJpmNLa8Qx7PV3+SZE3nrum37tyVVKfK9q7eXDYztOgIOKFNb3iS2CXCjrf3CsKGbXX+PvjqfBAH1cTc/lrDb2Rg2beH5mQam4zTPv2ndkPjEC0c5q92y+VNzBlKSnnBNlRg5fKIwbH3s8lOP51mdCYAdpwd8M6rYxs/jy37jWb9Utmh80HA3yR8KBDZYxEKkghO0PAFaC5kQIjUeYs="
+ ],
+ "pq_vkeys_source": "pq_keys.json in the terminal export; each key id recomputed from its own bytes, each key checked on 2026-08-18 against a real ML-DSA-44 cosignature at size 7437"
 }

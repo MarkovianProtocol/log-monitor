@@ -8,7 +8,8 @@ Each run it:
 1. Fetches the witnessed checkpoint and verifies the log's Ed25519 signature over the signed note.
 2. Verifies each witness cosignature ([tlog-cosignature](https://c2sp.org/tlog-cosignature),
    `cosignature/v1`) against a pinned key. Quorum counts only cosignatures that verify; a pinned
-   witness whose cosignature fails to verify is its own alert.
+   witness whose cosignature fails to verify is its own alert. ML-DSA-44 cosignature lines are
+   verified too, against the keys in `pq_vkeys`, but they do not count toward the quorum.
 3. Verifies an [RFC 6962](https://www.rfc-editor.org/rfc/rfc6962) consistency proof from the last
    trusted head to the new one.
 4. **Recomputes the tree root from the leaf bytes the log serves**, and requires it to equal the
@@ -23,14 +24,29 @@ alerts on a stale (frozen) checkpoint and sends a daily heartbeat, so silence is
 
 ## What it verifies, and what it does not
 
-- Verified: the log signature, each pinned Ed25519 witness cosignature, append-only consistency,
-  and that the served leaves reproduce the committed root.
-- Not verified: post-quantum (non-Ed25519) cosignatures are recorded, not checked.
+- Verified: the log signature, each pinned Ed25519 witness cosignature, each ML-DSA-44
+  cosignature, append-only consistency, and that the served leaves reproduce the committed root.
+- The quorum is counted over verified Ed25519 cosignatures from pinned witnesses alone. A valid
+  ML-DSA-44 line cannot stand in for a missing witness, and neither can an advisory one.
+- ML-DSA-44 verification needs the `dilithium_py` package. Without it the run reports the lines as
+  *could not check* — it does not pass them silently.
 - A watch match means the bytes matched. It says nothing about whether a record's content is true.
+
+## Advisory witnesses
+
+A log can be cosigned by a witness that is not in its pinned set. `witness_vkeys_advisory` holds
+keys for exactly that case: the cosignature is verified and reported, an invalid one alerts like
+any other, and it never counts toward the quorum. This keeps the monitor's arithmetic equal to the
+log's published policy while still checking the extra signature, so a reader who counts more
+cosignature lines than pinned keys can see why.
+
+Moving a key from advisory to pinned is a trust decision, not a config convenience: for the
+Markovian log it requires a new signed trust-root manifest.
 
 ## Run it
 
-Requires Python 3 and the `cryptography` package.
+Requires Python 3 and the `cryptography` package. Install `dilithium_py` as well to verify
+ML-DSA-44 cosignatures; without it those lines are reported as unchecked.
 
 ```
 cp config.example.json config.json      # already points at markovianprotocol.com's log
@@ -44,10 +60,11 @@ refuses to baseline an unauthenticated checkpoint); `--once-test-email` sends on
 Email goes through [Resend](https://resend.com) — point `resend_env` at a file with a
 `RESEND_API_KEY=` line, or use `--dry-run` and wire your own channel.
 
-`config.example.json` is preconfigured for the Markovian Protocol log, including its log key and
-its seven witness keys as published at
-[`/.well-known/verify_checkpoint.py`](https://markovianprotocol.com/.well-known/verify_checkpoint.py).
-Point it at any C2SP-checkpoint log by replacing `log_url`, `log_vkey`, and `witness_vkeys`.
+`config.example.json` is preconfigured for the Markovian Protocol log: its log key, its seven
+pinned witness keys as published at
+[`/.well-known/verify_checkpoint.py`](https://markovianprotocol.com/.well-known/verify_checkpoint.py),
+the one advisory witness that cosigns without being pinned, and the ML-DSA-44 keys. Point it at any
+C2SP-checkpoint log by replacing `log_url`, `log_vkey`, and `witness_vkeys`.
 
 ## Why a separate monitor
 
