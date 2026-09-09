@@ -28,8 +28,12 @@ alerts on a stale (frozen) checkpoint and sends a daily heartbeat, so silence is
   cosignature, append-only consistency, and that the served leaves reproduce the committed root.
 - The quorum is counted over verified Ed25519 cosignatures from pinned witnesses alone. A valid
   ML-DSA-44 line cannot stand in for a missing witness, and neither can an advisory one.
-- ML-DSA-44 verification needs the `dilithium_py` package. Without it the run reports the lines as
-  *could not check* — it does not pass them silently.
+- ML-DSA-44 verification uses every implementation it can import — `mldsa` and `dilithium_py` —
+  and they must agree. Disagreement is recorded as invalid, never as a pass. With neither
+  installed the run reports the lines as *could not check*; it does not pass them silently.
+  Prefer `mldsa`: `dilithium_py`'s own README says it is an educational resource that should not
+  be used for cryptographic applications, which is a thin foundation for the only check standing
+  behind a published key.
 - A watch match means the bytes matched. It says nothing about whether a record's content is true.
 
 ## Advisory witnesses
@@ -45,8 +49,9 @@ Markovian log it requires a new signed trust-root manifest.
 
 ## Run it
 
-Requires Python 3 and the `cryptography` package. Install `dilithium_py` as well to verify
-ML-DSA-44 cosignatures; without it those lines are reported as unchecked.
+Requires Python 3 and the `cryptography` package. Install `mldsa` to verify ML-DSA-44
+cosignatures, and `dilithium_py` alongside it if you want two implementations cross-checking
+each other; with neither, those lines are reported as unchecked.
 
 ```
 cp config.example.json config.json      # already points at markovianprotocol.com's log

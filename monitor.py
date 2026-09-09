@@ -136,16 +136,43 @@ def verify_pq_cosignatures(body, sigs):
     would ever have said so. FIPS 204, pure, empty context. The signed message is the
     tlog subtree/v1 preimage, not the cosignature/v1 note used for Ed25519.
 
+    Verified with every ML-DSA-44 implementation importable here, and they must
+    agree: disagreement is recorded as invalid, never as a pass. mldsa-py is the one
+    to keep -- dilithium-py's own README says it is an educational resource that
+    should not be used for cryptographic applications, which is a poor foundation for
+    the only check standing behind a published key.
+
     Returns (verified, invalid, unkeyed, unavailable). unavailable is a string reason
     when no ML-DSA-44 implementation is importable: that is reported as an inability
     to check, never as a pass.
     """
     if not PQ_VKEYS:
         return set(), set(), set(), "no pq_vkeys pinned in config", 0
+    backends = []
+    try:
+        from mldsa import VerificationKey as _MLDSAKey, VerificationError as _MLDSAErr
+
+        def _verify_mldsa_py(pub, msg, sig):
+            try:
+                _MLDSAKey(pub).verify(sig, msg)
+                return True
+            except _MLDSAErr:
+                return False
+
+        backends.append(("mldsa-py", _verify_mldsa_py))
+    except Exception:
+        pass
     try:
         from dilithium_py.ml_dsa import ML_DSA_44
-    except Exception as e:
-        return set(), set(), set(), "no ML-DSA-44 implementation: %r" % (e,), 0
+
+        def _verify_dilithium_py(pub, msg, sig):
+            return bool(ML_DSA_44.verify(pub, msg, sig))
+
+        backends.append(("dilithium-py", _verify_dilithium_py))
+    except Exception:
+        pass
+    if not backends:
+        return set(), set(), set(), "no ML-DSA-44 implementation importable", 0
 
     try:
         lines = body.split("\n")
@@ -184,13 +211,25 @@ def verify_pq_cosignatures(body, sigs):
         msg = (b"subtree/v1\n\x00" + lp(name.encode()) + ts.to_bytes(8, "big")
                + lp(origin.encode()) + (0).to_bytes(8, "big")
                + size.to_bytes(8, "big") + root32)
-        try:
-            if ML_DSA_44.verify(pub, msg, raw[12:]):
-                verified.add(name)
-            else:
-                invalid.add((name, "ML-DSA-44 signature did not verify"))
-        except Exception as e:
-            invalid.add((name, "ML-DSA-44 verify error: %r" % (e,)))
+        results = {}
+        for bname, fn in backends:
+            try:
+                results[bname] = fn(pub, msg, raw[12:])
+            except Exception as e:
+                results[bname] = "error: %r" % (e,)
+        errs = {b: r for b, r in results.items() if not isinstance(r, bool)}
+        if errs:
+            invalid.add((name, "ML-DSA-44 verify error: %s" % (sorted(errs.items()),)))
+        elif len(set(results.values())) > 1:
+            # Two implementations reading the same bytes differently is a finding
+            # about the implementations, and it is never a pass.
+            invalid.add((name, "ML-DSA-44 implementations disagree: %s"
+                         % (sorted(results.items()),)))
+        elif all(results.values()):
+            verified.add(name)
+        else:
+            invalid.add((name, "ML-DSA-44 signature did not verify (%s)"
+                         % (",".join(sorted(results)),)))
     # The log's own ML-DSA line is verified above and then dropped from the count,
     # for the same reason its Ed25519 line is: the operator holding its own key is
     # not evidence about the operator. Counting it would inflate the ratio to 3/2.
