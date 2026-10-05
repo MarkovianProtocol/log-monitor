@@ -68,7 +68,7 @@ Email goes through [Resend](https://resend.com) — point `resend_env` at a file
 `config.example.json` is preconfigured for the Markovian Protocol log: its log key, its seven
 pinned witness keys as published at
 [`/.well-known/verify_checkpoint.py`](https://markovianprotocol.com/.well-known/verify_checkpoint.py),
-the one advisory witness that cosigns without being pinned, and the ML-DSA-44 keys. Point it at any
+the two advisory witnesses that cosign without being pinned, and the ML-DSA-44 keys. Point it at any
 C2SP-checkpoint log by replacing `log_url`, `log_vkey`, and `witness_vkeys`.
 
 ## Why a separate monitor
