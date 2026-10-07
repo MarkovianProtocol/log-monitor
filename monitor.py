@@ -78,9 +78,18 @@ def http_get(path):
 
 
 # ── C2SP signed note ──────────────────────────────────────────────────
+
+def b64_strict(s):
+    """C2SP (Oct 2026): base64 MUST be canonical, RFC 4648 section 3.5. Decode, then
+    require the text to be exactly what the bytes re-encode to; unused trailing bits,
+    missing padding and stray characters are all refused."""
+    raw = base64.b64decode(s, validate=True)
+    if base64.b64encode(raw).decode("ascii") != s:
+        raise ValueError("non-canonical base64")
+    return raw
 def parse_vkey(vkey):
     name, _hash, b64 = vkey.split("+", 2)
-    raw = base64.b64decode(b64 + "=" * (-len(b64) % 4))
+    raw = b64_strict(b64)
     if raw[0] != 0x01:
         raise ValueError("not an ed25519 note vkey")
     return name, raw[1:33]
@@ -98,8 +107,8 @@ def parse_checkpoint(note_bytes):
     for ln in sigblock.splitlines():
         if ln.startswith("— "):
             _, name, s64 = ln.split(" ", 2)
-            sigs.append((name, base64.b64decode(s64 + "=" * (-len(s64) % 4))))
-    return body, origin, size, base64.b64decode(root_b64), sigs
+            sigs.append((name, b64_strict(s64)))
+    return body, origin, size, b64_strict(root_b64), sigs
 
 
 def verify_log_sig(body, sigs):
@@ -121,7 +130,7 @@ def parse_witness_vkey(vkey):
     0x04 || pub)[:4]); the hex field in the vkey string is informational.
     """
     name, _keyid_hex, b64 = vkey.split("+", 2)
-    blob = base64.b64decode(b64 + "=" * (-len(b64) % 4))
+    blob = b64_strict(b64)
     if blob[0] != 0x04:
         raise ValueError(f"{name}: not a cosignature/v1 (0x04) vkey")
     pub = blob[1:33]
@@ -176,14 +185,14 @@ def verify_pq_cosignatures(body, sigs):
 
     try:
         lines = body.split("\n")
-        origin, size, root32 = lines[0], int(lines[1]), base64.b64decode(lines[2])
+        origin, size, root32 = lines[0], int(lines[1]), b64_strict(lines[2])
     except Exception as e:
         return set(), set(), set(), "unparseable checkpoint body: %r" % (e,), 0
 
     pinned = {}
     for vkey in PQ_VKEYS:
         name, kid, b64 = vkey.split("+", 2)
-        kb = base64.b64decode(b64 + "=" * (-len(b64) % 4))
+        kb = b64_strict(b64)
         alg, pub = kb[0], kb[1:]
         if hashlib.sha256(name.encode() + b"\n" + bytes([alg]) + pub).digest()[:4].hex() != kid:
             # A pinned key whose id does not derive from its own bytes is a broken
@@ -587,7 +596,7 @@ def main():
         problems.append(f"tree SHRANK: {old_size} -> {size} (rollback/fork)")
     elif size > old_size:
         proof_body = http_get(f"/consistency?old={old_size}&new={size}")
-        proof = [base64.b64decode(l) for l in proof_body.decode().split() if l]
+        proof = [b64_strict(l) for l in proof_body.decode().split() if l]
         if not verify_consistency(old_size, size, old_root, root, proof):
             problems.append(f"consistency proof FAILED {old_size}->{size} (fork or rewrite)")
     else:
