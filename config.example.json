@@ -18,8 +18,7 @@
  "resend_env": "/path/to/resend.env",
  "witness_vkeys_advisory": [
   "gblin.digital/witness+c335a002+BF54nC8Q1wHAlKirQexRC5phxjLtbEhcq8udv8TXPwXx",
-  "whisper.online/witness/ns1+6a58da87+BANUBZXBS/7WhHsjIoGQ5lrdXNVczG/Nx1Y0Z/T4/wVg",
-  "whisper.online/witness/ns2+8116f75c+BNRtcGDJEno+ZjneJNeIi7mKMzWgRMnQYKmdTzPZuufs"
+  "whisper.online/witness+25aef676+BMXtkY/wfbHppAEEBMs0x9NdEEYZi3kj8JZMvy/28JWI"
  ],
  "witness_vkeys_advisory_source": "gblin.digital/witness has cosigned since 2026-08-18 (key published at https://gblin-mcp.gblin-mcp-worker.workers.dev/witness) but is NOT in the v2 trust-root manifest, so /policy gives it no quorum weight. Verified here so a bad signature still alerts; never counted. Promotion requires a v3 manifest under the offline key. whisper.online/witness has cosigned since 2026-10-03; its line carries the name of the server that signed (ns1 or ns2), both keys taken from the operator on 2026-10-03, one witness per its key page https://ns1.whisper.online/witness/key. Advisory until a v3 manifest; a silent advisory witness is not an alert.",
  "pq_vkeys": [
